@@ -2,8 +2,49 @@
  * Coroutine examples
  * Read more here:
  * https://kotlinlang.org/docs/coroutines-guide.html
+ *
+ * CoroutineScope
+ * Coroutines follow a principle of structured concurrency which means that new coroutines can be only launched in a
+ * specific CoroutineScope which delimits the lifetime of the coroutine.
+ * In the real application, you will be launching a lot of coroutines. Structured concurrency ensures that they are not
+ * lost and do not leak. An outer scope cannot complete until all its children coroutines complete.
+ * Structured concurrency also ensures that any errors in the code are properly reported and are never lost.
+ * In addition to the coroutine scope provided by different builders, it is possible to declare your own scope using the
+ * coroutineScope builder. It creates a coroutine scope and does not complete until all launched children complete.
+ * runBlocking and coroutineScope builders may look similar because they both wait for their body and all its children
+ * to complete. The main difference is that the runBlocking method blocks the current thread for waiting, while
+ * coroutineScope just suspends, releasing the underlying thread for other usages. Because of that difference,
+ * runBlocking is a regular function and coroutineScope is a suspending function.
+ * You can use coroutineScope from any suspending function.
+ *
+ * CoroutineContext
+ * Coroutines always execute in some context represented by a value of the CoroutineContext type, defined in the Kotlin
+ * standard library.
+ * The coroutine context is a set of various elements. The main elements are the Job of the coroutine and its dispatcher.
+ * When a coroutine is launched in the CoroutineScope of another coroutine, it inherits its context via
+ * CoroutineScope.coroutineContext and the Job of the new coroutine becomes a child of the parent coroutine's job.
+ * When the parent coroutine is cancelled, all its children are recursively cancelled, too.
+ * However, this parent-child relation can be explicitly overriden in one of two ways:
+ * When a different scope is explicitly specified when launching a coroutine (for example, GlobalScope.launch ),
+ * then it does not inherit a Job from the parent scope.
+ * When a different Job object is passed as the context for the new coroutine,
+ * then it overrides the Job of the parent scope.
+ * In both cases, the launched coroutine is not tied to the scope it was launched from and operates independently.
+ * A parent coroutine always waits for completion of all its children.
+ * A parent does not have to explicitly track all the children it launches,
+ * and it does not have to use Job.join to wait for them at the end:
+ *
+ * Dispatcher
+ * The coroutine context includes a coroutine dispatcher (see CoroutineDispatcher) that determines what thread or threads
+ * the corresponding coroutine uses for its execution. The coroutine dispatcher can confine coroutine execution to a
+ * specific thread, dispatch it to a thread pool, or let it run unconfined.
+ * All coroutine builders like launch and async accept an optional CoroutineContext parameter that can be used to
+ * explicitly specify the dispatcher for the new coroutine and other context elements.
+ *
+ *
  */
 import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
@@ -27,7 +68,9 @@ fun main(): Unit = runBlocking {
 //    launchAndJobCancel()
 //    launchAndCancelCooperatively()
 //    launchWithTimeout()
-    asyncVsLaunchConcurrencyTest()
+//    asyncVsLaunchConcurrencyTest()
+//    dispatchersAndThreadsTest()
+    scopeCancel()
 
     println("main end")
 }
@@ -168,6 +211,81 @@ suspend fun doLaunch() = coroutineScope {
     calculations.forEach {
         it.join()
         println("Launch result done")
+    }
+}
+
+/**
+ * Dispatchers specify mapping to threads
+ * Results:
+ * Unspecified, Thread: main
+ * Unconfined,  Thread: main
+ * Default,     Thread: DefaultDispatcher-worker-1
+ * IO,          Thread: DefaultDispatcher-worker-1
+ *
+ * Unspecified (Nothing passed)
+ * When launch is used without parameters, it inherits the context (and thus dispatcher) from the CoroutineScope
+ * it is being launched from. In this case, it inherits the context of the main runBlocking coroutine
+ * which runs in the main thread.
+ *
+ * Unconfined
+ * Dispatchers.Unconfined is a special dispatcher that also appears to run in the main thread,
+ * but it is, in fact, a different mechanism that is explained later.
+ *
+ * Default
+ * The default dispatcher that is used when no other dispatcher is explicitly specified in the scope.
+ * It is represented by Dispatchers.Default and uses a shared background pool of threads.
+ *
+ * newSingleThreadContext creates a thread for the coroutine to run.
+ * A dedicated thread is a very expensive resource.
+ * In a real application it must be either released, when no longer needed, using the close function,
+ * or stored in a top-level variable and reused throughout the application.
+ */
+suspend fun dispatchersAndThreadsTest() = coroutineScope {
+    launch { println("Dispatchers: Unspecified, Thread: ${Thread.currentThread().name}") }
+    launch(Dispatchers.Unconfined) { println("Dispatchers: Unconfined, Thread: ${Thread.currentThread().name}") }
+    launch(Dispatchers.Default) { println("Dispatchers: Default, Thread: ${Thread.currentThread().name}") }
+    launch(Dispatchers.IO) { println("Dispatchers: IO, Thread: ${Thread.currentThread().name}") }
+    launch(newSingleThreadContext("SingleThread")) { println("Dispatchers: newSingleThreadContext, I'm a thread") }
+    // OS Specific
+    // launch(Dispatchers.Main) { println("Dispatchers: Main, Thread: ${Thread.currentThread().name}") }
+}
+
+/**
+ * Canceling a scope
+ * We can manage the lifecycles of our coroutines by creating an instance of CoroutineScope tied to the lifecycle of
+ * our activity.
+ * A CoroutineScope instance can be created by the CoroutineScope() or MainScope() factory functions.
+ * The former creates a general-purpose scope, while the latter creates a scope for UI applications
+ * and uses Dispatchers.Main as the default dispatcher
+ */
+suspend fun scopeCancel() {
+    class LifeCycle {
+        val scope = CoroutineScope(Dispatchers.IO)
+        fun create() {
+            println("scopeCancel.create")
+            repeat(10000) {
+                scope.launch {
+                    println("scopeCancel doing my job $it")
+                    delay(Random.nextLong(10))
+
+                    // fix this exapmle
+
+                }
+            }
+        }
+
+        fun destroy() {
+            println("scopeCancel.destroy")
+            scope.cancel()
+        }
+    }
+
+    coroutineScope {
+        LifeCycle().apply {
+            create()
+            delay(5000L)
+            destroy()
+        }
     }
 }
 
