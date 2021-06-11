@@ -5,6 +5,7 @@
  */
 import kotlinx.coroutines.*
 import kotlin.random.Random
+import kotlin.system.measureTimeMillis
 
 /**
  * We can launch coroutines only in a coroutine scope (structured concurrency).
@@ -12,21 +13,25 @@ import kotlin.random.Random
  */
 fun main(): Unit = runBlocking {
     println("main start")
-    launch {
-        val result = calculate()
-        println("main result 1: $result")
-    }
-    launch {
-        val result = calculate()
-        println("main result 2: $result")
-    }
-    doSameInMainJustInAFunction()
-    launchAndJobWait()
-    launchAndJobCancel()
-    launchAndCancelCooperatively()
-    launchWithTimeout()
+
+//    launch {
+//        val result = calculate()
+//        println("main result 1: $result")
+//    }
+//    launch {
+//        val result = calculate()
+//        println("main result 2: $result")
+//    }
+//    doSameInMainJustInAFunction()
+//    launchAndJobWait()
+//    launchAndJobCancel()
+//    launchAndCancelCooperatively()
+//    launchWithTimeout()
+    asyncVsLaunchConcurrencyTest()
+
     println("main end")
 }
+
 
 /**
  * We can launch coroutines only in a coroutine scope (structured concurrency).
@@ -128,7 +133,43 @@ suspend fun launchWithTimeout() = coroutineScope {
     println(result ?: "WithTimeoutOrNull timed out")
 }
 
+/**
+ * There is a common misconception that coroutines built with [async] builder are concurrent
+ * while the ones built with [launch] are sequential. that is incorrect, here's a test.
+ *
+ * The difference is with async you get a result returned, also there are differences how they handle exceptions
+ * See more in the documentation.
+ */
+suspend fun asyncVsLaunchConcurrencyTest() {
+    println("Async vs Launch test")
+    val timeAsync = measureTimeMillis { doAsync() }
+    val timeLaunch = measureTimeMillis { doLaunch() }
+    println("Async: $timeAsync\nLaunch: $timeLaunch")
+}
 
+suspend fun doAsync() = coroutineScope {
+    val calculations = mutableListOf<Deferred<Int>>()
+    repeat(10) {
+        val calculation = async { calculate() }
+        calculations.add(calculation)
+    }
+    calculations.forEach {
+        val result = it.await()
+        println("Async result $result")
+    }
+}
+
+suspend fun doLaunch() = coroutineScope {
+    val calculations = mutableListOf<Job>()
+    repeat(10) {
+        val calculation = launch { calculate() }
+        calculations.add(calculation)
+    }
+    calculations.forEach {
+        it.join()
+        println("Launch result done")
+    }
+}
 
 /**
  * @delay is a suspending function that suspends the coroutine for specified time.
