@@ -1,7 +1,4 @@
 /**
- * Coroutine examples
- * Read more here:
- * https://kotlinlang.org/docs/coroutines-guide.html
  *
  * CoroutineScope
  * Coroutines follow a principle of structured concurrency which means that new coroutines can be only launched in a
@@ -41,12 +38,12 @@
  * All coroutine builders like launch and async accept an optional CoroutineContext parameter that can be used to
  * explicitly specify the dispatcher for the new coroutine and other context elements.
  *
- *
  */
 
 import kotlinx.coroutines.*
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
+
 
 /**
  * We can launch coroutines only in a coroutine scope (structured concurrency).
@@ -93,6 +90,7 @@ suspend fun doSameInMainJustInAFunction() = coroutineScope {
     println("func end")
 }
 
+
 /**
  * @launch is a coroutine builder which returns a job object
  * which is a handle to the launched coroutine and can be used to explicitly wait for its completion.
@@ -105,6 +103,7 @@ suspend fun launchAndJobWait() = coroutineScope {
     job.join()
     println("job wait done")
 }
+
 
 /**
  * @launch is a coroutine builder which returns a job object
@@ -129,6 +128,7 @@ suspend fun launchAndJobCancel() = coroutineScope {
     println("job cancel done")
 }
 
+
 /**
  * There are two approaches to making computation code cancellable.
  * The first one is to periodically invoke a suspending function that checks for cancellation.
@@ -148,6 +148,7 @@ suspend fun launchAndCancelCooperatively() = coroutineScope {
     job.cancelAndJoin()
     println("Cooperative respectfully canceled")
 }
+
 
 /**
  * Cancel execution of a coroutine on timeout with [withTimeout] which throws a [TimeoutCancellationException]
@@ -176,6 +177,7 @@ suspend fun launchWithTimeout() = coroutineScope {
     println(result ?: "WithTimeoutOrNull timed out")
 }
 
+
 /**
  * There is a common misconception that coroutines built with [async] builder are concurrent
  * while the ones built with [launch] are sequential. that is incorrect, here's a test.
@@ -190,6 +192,7 @@ suspend fun asyncVsLaunchConcurrencyTest() {
     println("Async: $timeAsync\nLaunch: $timeLaunch")
 }
 
+
 suspend fun doAsync() = coroutineScope {
     val calculations = mutableListOf<Deferred<Int>>()
     repeat(10) {
@@ -202,6 +205,7 @@ suspend fun doAsync() = coroutineScope {
     }
 }
 
+
 suspend fun doLaunch() = coroutineScope {
     val calculations = mutableListOf<Job>()
     repeat(10) {
@@ -213,6 +217,7 @@ suspend fun doLaunch() = coroutineScope {
         println("Launch result done")
     }
 }
+
 
 /**
  * Dispatchers specify mapping to threads
@@ -249,6 +254,7 @@ suspend fun dispatchersAndThreadsTest() = coroutineScope {
     // OS Specific
     // launch(Dispatchers.Main) { println("Dispatchers: Main, Thread: ${Thread.currentThread().name}") }
 }
+
 
 /**
  * Canceling a scope

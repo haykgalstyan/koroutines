@@ -1,11 +1,12 @@
-
-
+/**
+ * Coroutine examples
+ * Read more here:
+ * https://kotlinlang.org/docs/coroutines-guide.html
+ */
 
 fun main() {
-    println("main start")
 //    runBasics()
-
-    println("main end")
+    runFlows()
 }
 
 
