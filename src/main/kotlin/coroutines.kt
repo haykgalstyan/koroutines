@@ -49,7 +49,7 @@ import kotlin.system.measureTimeMillis
  * We can launch coroutines only in a coroutine scope (structured concurrency).
  * In this case we use a blocking scope to block the current thread until all the children coroutines finish.
  */
-fun runBasics() = runBlocking {
+fun runCoroutines() = runBlocking {
     println("runBasics start")
 
     launch {

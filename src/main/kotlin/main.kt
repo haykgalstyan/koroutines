@@ -5,8 +5,9 @@
  */
 
 fun main() {
-//    runBasics()
-    runFlows()
+//    runCoroutines()
+//    runFlows()
+    runChannels()
 }
 
 
