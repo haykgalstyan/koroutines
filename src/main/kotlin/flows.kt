@@ -8,6 +8,14 @@ import kotlin.system.measureTimeMillis
  * A suspending function asynchronously returns a single value,
  * but how can we return multiple asynchronously computed values?
  * This is where Kotlin Flows come in.
+ *
+ * Only basics are provided here.
+ * For composing multiple flows, combining them, flattening, exception handling and more see the docs:
+ * Zip: https://kotlinlang.org/docs/flow.html#zip
+ * Combine: https://kotlinlang.org/docs/flow.html#combine
+ * flatMaps: https://kotlinlang.org/docs/flow.html#flatmapconcat
+ * exceptions: https://kotlinlang.org/docs/flow.html#flow-exceptions
+ * completion: https://kotlinlang.org/docs/flow.html#flow-completion
  */
 fun runFlows() = runBlocking {
     println("runFlows start")
@@ -19,7 +27,9 @@ fun runFlows() = runBlocking {
 //    terminateFlowOperators()
 //    flowSequentialByDefaultTest()
 //    flowContextChange()
-    bufferingTest()
+//    bufferingTest()
+//    conflatingTest()
+//    collectLatestTest()
 
     println("runFlows end")
 }
@@ -175,7 +185,7 @@ suspend fun flowContextChange() {
 
 /**
  *  Buffering
- *  If flow takes shorter than te processing, we can buffer it to finish sooner
+ *  If flow takes shorter than the processing, we can use [buffer] to finish sooner
  */
 suspend fun bufferingTest() {
     val flowTime = 100L
@@ -207,4 +217,73 @@ suspend fun bufferingTest() {
     println("Buffered took: $timeBuffered")
 
     println("Buffered was faster by ${timeUnbuffered - timeBuffered}")
+}
+
+
+/**
+ *  Conflation
+ *  If we don't need flow results that arent ready in time of collection we can use [conflate] operator
+ */
+suspend fun conflatingTest() {
+    val flowTime = 100L
+    val collectionTime = 1000L
+    fun newFlow() = flow {
+        for (i in 1..30) {
+            delay(flowTime)
+            emit(i)
+        }
+    }
+
+    val timeNormal = measureTimeMillis {
+        newFlow()
+            .collect {
+                delay(collectionTime)
+                println(it)
+            }
+    }.also { println("timeNormal: $it") }
+
+    val timeConflated = measureTimeMillis {
+        newFlow()
+            .conflate()
+            .collect {
+                delay(collectionTime)
+                println(it)
+            }
+    }.also { println("timeConflated: $it") }
+
+    println("Conflated was faster by ${timeNormal - timeConflated}")
+}
+
+
+/**
+ * If only the latest value is needed and we have a slow collector, we can restart collector on each new value with
+ * [collectLatest]
+ */
+suspend fun collectLatestTest() {
+    val flowTime = 100L
+    val collectionTime = 1000L
+    fun newFlow() = flow {
+        for (i in 1..10) {
+            delay(flowTime)
+            emit(i)
+        }
+    }
+
+    val timeNormal = measureTimeMillis {
+        newFlow()
+            .collect {
+                delay(collectionTime)
+                println(it)
+            }
+    }.also { println("timeNormal: $it") }
+
+    val timeCollectLatest = measureTimeMillis {
+        newFlow()
+            .collectLatest {
+                delay(collectionTime)
+                println(it)
+            }
+    }.also { println("timeCollectLatest: $it") }
+
+    println("CollectLatest was faster by ${timeNormal - timeCollectLatest}")
 }
