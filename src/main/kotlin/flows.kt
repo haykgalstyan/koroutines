@@ -1,7 +1,7 @@
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.random.Random
+import kotlin.system.measureTimeMillis
 
 
 /**
@@ -14,7 +14,12 @@ fun runFlows() = runBlocking {
 
 //    flowTest()
 //    flowCancelTest()
-    flowOperatorsAndOtherBuilders()
+//    flowOperatorsAndOtherBuilders()
+//    limitSizeTest()
+//    terminateFlowOperators()
+//    flowSequentialByDefaultTest()
+//    flowContextChange()
+    bufferingTest()
 
     println("runFlows end")
 }
@@ -53,7 +58,7 @@ suspend fun flowCancelTest() {
 
 
 /**
- * Operators like [map], [filter] of flows are lazy
+ * Intermediate flow Operators like [map], [filter] of flows are lazy.
  * Flows can be transformed with operators, just as you would with collections and sequences.
  * Intermediate operators are applied to an upstream flow and return a downstream flow.
  * These operators are cold, just like flows are. A call to such an operator is not a suspending function itself.
@@ -66,7 +71,7 @@ suspend fun flowCancelTest() {
  * Useful flow builders
  * [flowOf] and [asFlow] examples
  */
-suspend fun flowOperatorsAndOtherBuilders() {
+suspend fun intermediateFlowOperatorsAndOtherBuilders() {
     val delay = 3000L
 
     val flowOf = flowOf("first", "second", "third", "forth", "fifth")
@@ -85,5 +90,121 @@ suspend fun flowOperatorsAndOtherBuilders() {
 
 
 /**
- *
+ * Limiting size
  */
+suspend fun limitSizeTest() {
+    val flowOf = flowOf("first", "second", "third", "forth", "fifth")
+    val limit = 2
+    println("limitSizeTest: taking only $limit")
+    flowOf.take(limit).collect { println(it) }
+}
+
+
+/**
+ * Terminal operators on flows are suspending functions that start a collection of the flow.
+ * The [collect] operator is the most basic one, but there are other terminal operators, which can make it easier to:
+ *   - Convert to various collections like toList and toSet.
+ *   - Get the first value and ensure that a flow emits a single value.
+ *   - Reduce a flow to a value with reduce and fold.
+ */
+suspend fun terminateFlowOperators() {
+    val squareSum = (1..11)
+        .asFlow()
+        .map { it * it }
+        .reduce { a, b -> a + b }
+
+    println("Flow termination by [reduce]: result $squareSum")
+}
+
+
+/**
+ * Flows are sequential by default
+ *
+ * Each individual collection of a flow is performed sequentially unless special operators that operate on multiple
+ * flows are used. The collection works directly in the coroutine that calls a terminal operator.
+ * No new coroutines are launched by default. Each emitted value is processed by all the intermediate operators from
+ * upstream to downstream and is then delivered to the terminal operator after.
+ */
+suspend fun flowSequentialByDefaultTest() = (1..10).asFlow()
+    .filter {
+        println("filtering $it")
+        it % 2 == 0
+    }
+    .map {
+        println("mapping $it")
+        it.toString()
+    }
+    .collect { println("collecting $it") }
+
+
+/**
+ * Flow context
+ *
+ * Collection of a flow always happens in the context of the calling coroutine (Context preservation)
+ * regardless of the implementation details of the flow function.
+ * This is the perfect default for fast-running or asynchronous code that does not care about the execution context
+ * and does not block the caller.
+ * However, the long-running CPU-consuming code might need to be executed in the context of Dispatchers.Default
+ * and UI-updating code might need to be executed in the context of Dispatchers.Main.
+ * Usually, withContext is used to change the context in the code using Kotlin coroutines, but code in the flow { ... }
+ * builder has to honor the context preservation property and is not allowed to emit from a different context.
+ * Hence an exception will be thrown: java.lang.IllegalStateException: Flow invariant is violated... Please refer to
+ * 'flow' documentation or use 'flowOn' instead.
+ * So the [flowOn] function needs to be used to change the context of the flow emission.
+ *
+ * Notice how flow { ... } works in the background thread, while collection happens in the main thread:
+ */
+suspend fun flowContextChange() {
+    println("flowContextChange: start on thread: ${Thread.currentThread().name}")
+
+    val blockingFlow = flow {
+        println("flowContextChange: flow started on thread: ${Thread.currentThread().name}")
+        Thread.sleep(3000L)
+        println("flowContextChange: flow ended on thread: ${Thread.currentThread().name}")
+        emit(Random.nextInt())
+    }.flowOn(Dispatchers.IO)
+
+    println("flowContextChange: code execution continued on thread: ${Thread.currentThread().name}")
+
+    // collect on current context
+    blockingFlow.collect {
+        println("flowContextChange: collected on thread: ${Thread.currentThread().name} - result: $it ")
+    }
+}
+
+
+/**
+ *  Buffering
+ *  If flow takes shorter than te processing, we can buffer it to finish sooner
+ */
+suspend fun bufferingTest() {
+    val flowTime = 100L
+    val collectionTime = 300L
+    fun newFlow() = flow {
+        for (i in 1..10) {
+            delay(flowTime)
+            emit(i)
+        }
+    }
+
+    val timeUnbuffered = measureTimeMillis {
+        newFlow()
+            .collect {
+                delay(collectionTime)
+                println(it)
+            }
+    }
+    println("Unbuffered took: $timeUnbuffered")
+
+    val timeBuffered = measureTimeMillis {
+        newFlow()
+            .buffer()
+            .collect {
+                delay(collectionTime)
+                println(it)
+            }
+    }
+    println("Buffered took: $timeBuffered")
+
+    println("Buffered was faster by ${timeUnbuffered - timeBuffered}")
+}
