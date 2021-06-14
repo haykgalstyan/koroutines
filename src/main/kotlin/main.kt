@@ -44,7 +44,6 @@
  *
  */
 import kotlinx.coroutines.*
-import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
@@ -262,14 +261,12 @@ suspend fun scopeCancel() {
     class LifeCycle {
         val scope = CoroutineScope(Dispatchers.IO)
         fun create() {
-            println("scopeCancel.create")
-            repeat(10000) {
+            val nJobs = 10
+            println("scopeCancel.create: launching $nJobs jobs")
+            repeat(nJobs) { i ->
                 scope.launch {
-                    println("scopeCancel doing my job $it")
-                    delay(Random.nextLong(10))
-
-                    // fix this exapmle
-
+                    delay((i + 1) * 200L)
+                    println("scopeCancel: doing my job [$i of $nJobs]")
                 }
             }
         }
@@ -283,11 +280,12 @@ suspend fun scopeCancel() {
     coroutineScope {
         LifeCycle().apply {
             create()
-            delay(5000L)
+            delay(500L)
             destroy()
         }
     }
 }
+
 
 /**
  * @delay is a suspending function that suspends the coroutine for specified time.
