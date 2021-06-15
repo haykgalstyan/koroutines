@@ -20,16 +20,16 @@ import kotlin.system.measureTimeMillis
 fun runFlows() = runBlocking {
     println("runFlows start")
 
-//    flowTest()
-//    flowCancelTest()
-//    flowOperatorsAndOtherBuilders()
-//    limitSizeTest()
-//    terminateFlowOperators()
-//    flowSequentialByDefaultTest()
-//    flowContextChange()
-//    bufferingTest()
-//    conflatingTest()
-//    collectLatestTest()
+    flowTest()
+    flowCancelTest()
+    intermediateFlowOperatorsAndOtherBuilders()
+    limitSizeTest()
+    terminateFlowOperators()
+    flowSequentialByDefaultTest()
+    flowContextChange()
+    bufferingTest()
+    conflatingTest()
+    collectLatestTest()
 
     println("runFlows end")
 }

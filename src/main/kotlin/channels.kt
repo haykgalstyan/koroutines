@@ -12,10 +12,10 @@ import kotlin.random.Random
 fun runChannels() = runBlocking {
     println("runChannels start")
 
-//    channelsTest()
-//    channelsClosingAndIterating()
-//    producer()
-//    buffered()
+    channelsTest()
+    channelsClosingAndIterating()
+    producer()
+    buffered()
     tickerChannel()
 
     println("runChannels end")
@@ -101,8 +101,5 @@ suspend fun buffered() = coroutineScope {
  */
 suspend fun tickerChannel() = coroutineScope {
     val channel = ticker(delayMillis = 1000, initialDelayMillis = 0)
-    var i = 0
-    channel.consumeEach {
-        println("consumed a tick $it ${i++}")
-    }
+    channel.consumeEach { println("consumed a tick $it") }
 }

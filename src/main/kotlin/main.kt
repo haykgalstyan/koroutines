@@ -7,7 +7,8 @@
 fun main() {
 //    runCoroutines()
 //    runFlows()
-    runChannels()
+//    runChannels()
+    runThreadSafety()
 }
 
 
