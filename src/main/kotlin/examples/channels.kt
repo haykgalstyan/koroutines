@@ -3,7 +3,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.channels.ticker
-import kotlin.random.Random
 
 /**
  * Deferred values provide a convenient way to transfer a single value between coroutines.

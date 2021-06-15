@@ -16,6 +16,7 @@ import kotlin.system.measureTimeMillis
  * flatMaps: https://kotlinlang.org/docs/flow.html#flatmapconcat
  * exceptions: https://kotlinlang.org/docs/flow.html#flow-exceptions
  * completion: https://kotlinlang.org/docs/flow.html#flow-completion
+ * select expression (experimental): https://kotlinlang.org/docs/select-expression.html
  */
 fun runFlows() = runBlocking {
     println("runFlows start")

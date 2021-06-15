@@ -28,8 +28,10 @@
  * then it overrides the Job of the parent scope.
  * In both cases, the launched coroutine is not tied to the scope it was launched from and operates independently.
  * A parent coroutine always waits for completion of all its children.
- * A parent does not have to explicitly track all the children it launches,
- * and it does not have to use Job.join to wait for them at the end:
+ * A parent does not have to explicitly track all the children it launches, and it does not have to use Job.join to
+ * wait for them at the end.
+ * withContext does not create a new coroutine, it only shifts the context of the existing coroutine,
+ * which is why it's a suspend function (unlike launch and async).
  *
  * Dispatcher
  * The coroutine context includes a coroutine dispatcher (see CoroutineDispatcher) that determines what thread or threads
